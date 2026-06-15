@@ -18,7 +18,7 @@ const readJsonBody = (req) => {
       try {
         resolve(JSON.parse(body));
       } catch (jsonErr) {
-        reject(new Error('Invalid JSON body'));
+        reject(new Error('Invalid JSON body')); 
       }
     });
 
@@ -26,7 +26,18 @@ const readJsonBody = (req) => {
   });
 };
 
+const getFetch = async () => {
+  if (typeof fetch === 'function') return fetch;
+  const undici = await import('undici');
+  if (typeof undici.fetch !== 'function') {
+    throw new Error('Fetch is not available in this runtime');
+  }
+  return undici.fetch;
+};
+
 module.exports = async (req, res) => {
+  console.log('[leads-proxy] invoked', req.method, req.url);
+
   if (req.method !== 'POST') {
     res.statusCode = 405;
     res.setHeader('Content-Type', 'application/json');
@@ -46,16 +57,18 @@ module.exports = async (req, res) => {
 
   try {
     const lead = req.body && Object.keys(req.body).length ? req.body : await readJsonBody(req);
+    console.log('[leads-proxy] lead body:', lead && Object.keys(lead).length ? 'parsed' : 'empty');
 
     if (!lead || !Object.keys(lead).length) {
-      throw new Error('Request body is empty or invalid JSON');
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: 'Request body is empty or invalid JSON' }));
+      return;
     }
 
-    if (typeof fetch !== 'function') {
-      throw new Error('Global fetch is not available in this runtime');
-    }
+    const localFetch = await getFetch();
 
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+    const r = await localFetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,12 +81,16 @@ module.exports = async (req, res) => {
     const text = await r.text();
     res.statusCode = r.status;
     res.setHeader('Content-Type', 'application/json');
+
     if (!r.ok) {
+      console.error('[leads-proxy] supabase error', r.status, text);
       res.end(JSON.stringify({ error: `Supabase insert failed ${r.status}`, details: text || undefined }));
       return;
     }
+
     res.end(text || JSON.stringify({ status: 'ok' }));
   } catch (err) {
+    console.error('[leads-proxy] error', err);
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: err.message }));
