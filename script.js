@@ -3,8 +3,9 @@ const menuToggle = document.querySelector("[data-menu-toggle]");
 const leadForm = document.querySelector("#leadForm");
 const formStatus = document.querySelector("[data-form-status]");
 
-const SUPABASE_URL = "https://vraflozbreffvniajiva.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZyYWZsb3picmVmZnZuaWFqaXZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNjA1MDIsImV4cCI6MjA5NjkzNjUwMn0.Jpza8sWU6aM_9Kz6QQN9OvbcSSLdxiHl7pl3p4iwmKo";
+// Updated Supabase project URL as requested. Provide the anon key securely.
+const SUPABASE_URL = "https://vfrctiuavawnteutblbd.supabase.co";
+const SUPABASE_ANON_KEY = ""; // <-- paste your anon public key here or set as environment variable in production
 const LEADS_TABLE = "leads";
 
 const syncHeader = () => {
