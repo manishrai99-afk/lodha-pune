@@ -5,10 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="24K Realtors is a real estate property consultant helping buyers, sellers, investors, and tenants find premium homes and commercial properties."
+      content="Pune real estate advisory for Lodha Pune, Hinjewadi, Baner, and Kharadi. Buy, sell, rent or invest with expert local guidance."
     >
-    <title>24K Realtors | Real Estate Property Consultant</title>
+    <meta name="keywords" content="Pune real estate consultant, Hinjewadi flats, Lodha Pune property, Pune property advisor, Pune investment homes">
+    <title>Lodha Pune Hinjewadi | 24K Realtors Pune Property Consultant</title>
     <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "24K Realtors",
+        "description": "Pune real estate advisory for Lodha Pune, Hinjewadi, Baner, and Kharadi. Buy, sell, rent or invest with expert local guidance.",
+        "image": "https://lodha-pune.vercel.app/og-image.jpg",
+        "telephone": "+919673000053",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Pune",
+          "addressRegion": "Maharashtra",
+          "addressCountry": "IN"
+        },
+        "areaServed": ["Pune", "Hinjewadi", "Baner", "Kharadi", "Viman Nagar"],
+        "url": "https://lodha-pune.vercel.app"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How soon can I schedule a site visit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Most visits are arranged within 2-3 business days depending on developer availability."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you help with documentation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. We coordinate the entire process including agreements, approvals, and verification checks."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I get advice on resale and rental value?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely. We provide market-backed recommendations for both resale pricing and rental yield potential."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <header class="site-header" data-header>
@@ -16,17 +67,14 @@
         <span class="brand-mark">24K</span>
         <span>
           <strong>24K Realtors</strong>
-          <small>Property Consultant</small>
+          <small>Pune Property Advisor</small>
         </span>
       </a>
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#services">Services</a>
         <a href="#lodha-hinjwadi">Lodha Pune</a>
         <a href="#portfolio">Properties</a>
-        <a href="#process">Process</a>
-        <a href="#success">Closures</a>
         <a href="#testimonials">Testimonials</a>
-        <a href="#faq">FAQ</a>
         <a href="#contact">Contact</a>
       </nav>
       <a class="header-call" href="tel:+919673000053">+91 9673000053</a>
@@ -34,6 +82,10 @@
         <span></span>
         <span></span>
       </button>
+      <div class="header-actions">
+        <a class="btn primary" href="#leadForm">Enquire Now</a>
+        <a class="btn ghost" href="https://wa.me/919673000053">WhatsApp</a>
+      </div>
     </header>
 
     <main id="top">
@@ -41,21 +93,22 @@
         <div class="hero-media" aria-hidden="true">
           <img
             src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=82"
-            alt=""
+            alt="Premium Pune residential property consulting with modern home interior"
           >
         </div>
         <div class="hero-shade"></div>
         <div class="hero-content">
-          <p class="eyebrow">Real Estate Property Consultant</p>
-          <h1>Find, sell, or invest in property with 24K confidence.</h1>
+          <p class="eyebrow">Pune Property Advisory</p>
+          <h1>Premium Pune real estate advisory for buyers, sellers, and investors in Hinjewadi.</h1>
           <p class="hero-copy">
-            Personalised property advisory for residential and commercial buyers,
-            owners, tenants, and investors across Pune and high-growth neighbourhoods.
+            Expert guidance on Lodha Pune flats, resale deals, and investment opportunities across Hinjewadi, Baner, Kharadi, and nearby Pune micro-markets.
           </p>
+          <p class="hero-promise">Buy faster with curated listings, sell at the right price, and invest with rental & appreciation outlook.</p>
           <div class="hero-actions">
-            <a class="btn primary" href="#contact">Enquire Now</a>
-            <a class="btn ghost" href="https://wa.me/919673000053" target="_blank" rel="noreferrer">WhatsApp Us</a>
+            <a class="btn primary" href="#leadForm">Book Free Property Advice</a>
+            <a class="btn ghost" href="#portfolio">See top Hinjewadi homes</a>
           </div>
+          <p class="hero-alert">Limited site visits available this week.</p>
           <dl class="hero-stats" aria-label="24K Realtors highlights">
             <div>
               <dt>Verified</dt>
@@ -73,6 +126,7 @@
         </div>
         <form class="lead-card" id="leadForm">
           <p class="form-kicker">Book a free consultation</p>
+          <p class="form-promise">Get a free Pune property shortlist on submission and expert follow-up within 24 hours.</p>
           <h2>Tell us what you are looking for</h2>
           <label>
             Full name
@@ -116,7 +170,11 @@
               <option>Flexible / planning</option>
             </select>
           </label>
-          <button class="btn primary full" type="submit">Send Enquiry</button>
+          <button class="btn primary full" type="submit">Book Free Property Advice</button>
+          <div class="form-help">
+            <a class="callback-link" href="tel:+919673000053">Request callback</a>
+            <span>We’ll contact you within 24 hours.</span>
+          </div>
           <p class="form-status" data-form-status role="status" aria-live="polite"></p>
           <p class="form-note">Your enquiry will be saved securely for our CRM follow-up.</p>
         </form>
@@ -201,23 +259,78 @@
           <article>
             <span>01</span>
             <h3>Home Buying</h3>
-            <p>Curated options for apartments, villas, plots, and resale homes based on budget, lifestyle, and location fit.</p>
+            <p>Buy faster with curated listings for Pune apartments, villas, plots and resale homes.</p>
+            <a class="text-link" href="#leadForm">Talk to a Pune advisor</a>
           </article>
           <article>
             <span>02</span>
             <h3>Property Selling</h3>
-            <p>Pricing guidance, buyer discovery, site visits, negotiation, and transaction coordination for owners.</p>
+            <p>Sell at the right price with buyer discovery, market positioning and negotiation support.</p>
+            <a class="text-link" href="#leadForm">Start your sale plan</a>
           </article>
           <article>
             <span>03</span>
             <h3>Rent & Lease</h3>
-            <p>Tenant and landlord assistance for residential and commercial leases with practical documentation support.</p>
+            <p>Lease or rent faster with tenant screening, documentation and landlord support.</p>
+            <a class="text-link" href="#leadForm">Request rental assistance</a>
           </article>
           <article>
             <span>04</span>
             <h3>Investment Advisory</h3>
-            <p>Market-led recommendations for appreciation potential, rental yield, developer credibility, and exit planning.</p>
+            <p>Invest with rental & appreciation outlook, developer insight and exit planning.</p>
+            <a class="text-link" href="#leadForm">Get investment guidance</a>
           </article>
+        </div>
+      </section>
+
+      <section class="trust section" id="trust">
+        <div class="section-heading">
+          <p class="eyebrow">Trusted Pune Advisors</p>
+          <h2>Verified property advisory for buyers, sellers, and investors</h2>
+        </div>
+        <div class="trust-grid">
+          <article>
+            <h3>Verified listings</h3>
+            <p>Hand-picked Lodha Pune and Pune resale options with full verification.</p>
+          </article>
+          <article>
+            <h3>Market expertise</h3>
+            <p>Deep Pune market knowledge across Hinjewadi, Baner, Kharadi and Viman Nagar.</p>
+          </article>
+          <article>
+            <h3>Document assistance</h3>
+            <p>Support for agreements, approvals, and compliance checks.</p>
+          </article>
+          <article>
+            <h3>Negotiation support</h3>
+            <p>Strong deal support to secure the best terms and closing outcome.</p>
+          </article>
+        </div>
+        <div class="metrics-grid">
+          <div>
+            <strong>12+</strong>
+            <span>homes closed in Pune this year</span>
+          </div>
+          <div>
+            <strong>95%</strong>
+            <span>client satisfaction rate</span>
+          </div>
+          <div>
+            <strong>30+</strong>
+            <span>site visits organized</span>
+          </div>
+        </div>
+        <p class="trust-note">Partnered with leading Pune developers and certified for property due diligence and local advisory excellence.</p>
+      </section>
+
+      <section class="section cta-banner">
+        <div class="cta-panel">
+          <p class="eyebrow">Looking for the best Hinjewadi options?</p>
+          <h2>Book a free property advisory call and receive our top Pune shortlist.</h2>
+          <div class="hero-actions">
+            <a class="btn primary" href="#leadForm">Get Pune Property Options</a>
+            <a class="btn ghost" href="https://wa.me/919673000053">WhatsApp Now</a>
+          </div>
         </div>
       </section>
 
@@ -286,12 +399,12 @@
         </div>
         <div class="testimonial-grid">
           <article>
-            <p>“24K Realtors made the home buying process simple, transparent and fast. Their advice on location and pricing was excellent.”</p>
-            <strong>– Priya and Amit</strong>
+            <p>“24K Realtors helped us move into a 2BHK Hinjewadi flat in just three weeks. Their local market guidance and negotiation support were key.”</p>
+            <strong>– Priya & Amit, new homeowners</strong>
           </article>
           <article>
-            <p>“We found a perfect investment property in Hinjewadi with a strong rental outlook. The team handled the entire negotiation.”</p>
-            <strong>– Dinesh K.</strong>
+            <p>“We secured a Lodha Pune investment flat with strong rental potential. The team handled the paperwork and closed the deal quickly.”</p>
+            <strong>– Dinesh K., investor</strong>
           </article>
         </div>
       </section>
