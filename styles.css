@@ -129,6 +129,10 @@ a {
   font-size: 1rem;
 }
 
+.lead-card .form-promise {
+  color: var(--ink);
+}
+
 .hero-alert {
   margin-top: 16px;
   padding: 14px 18px;
