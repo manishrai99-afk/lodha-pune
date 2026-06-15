@@ -15,6 +15,8 @@ const types = {
   ".svg": "image/svg+xml"
 };
 
+const https = require('https');
+
 const server = http.createServer((request, response) => {
   let pathname = decodeURIComponent((request.url || "/").split("?")[0]);
   if (pathname === "/") pathname = "/index.html";
@@ -39,6 +41,58 @@ const server = http.createServer((request, response) => {
   if (!filePath.startsWith(root)) {
     response.writeHead(403);
     response.end("Forbidden");
+    return;
+  }
+
+  // Local serverless-like proxy: POST /api/leads-proxy -> forward to Supabase using service_role key
+  if (pathname === '/api/leads-proxy' && request.method === 'POST') {
+    const SUPABASE_URL = process.env.SUPABASE_URL || '';
+    const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      response.writeHead(500, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ error: 'Server missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' }));
+      return;
+    }
+
+    let body = '';
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      try {
+        const supabaseUrl = new URL(`${SUPABASE_URL}/rest/v1/leads`);
+        const opts = {
+          hostname: supabaseUrl.hostname,
+          path: supabaseUrl.pathname + (supabaseUrl.search || ''),
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`
+          }
+        };
+
+        const prox = https.request(opts, (supRes) => {
+          let respData = '';
+          supRes.on('data', (c) => { respData += c; });
+          supRes.on('end', () => {
+            response.writeHead(supRes.statusCode || 200, { 'Content-Type': 'application/json' });
+            response.end(respData || JSON.stringify({ status: 'ok' }));
+          });
+        });
+
+        prox.on('error', (err) => {
+          response.writeHead(502, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ error: err.message }));
+        });
+
+        prox.write(body);
+        prox.end();
+      } catch (err) {
+        response.writeHead(500, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ error: err.message }));
+      }
+    });
+
     return;
   }
 
