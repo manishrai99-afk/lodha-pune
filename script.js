@@ -91,34 +91,28 @@ const saveLead = async (lead) => {
   });
 
   if (!response.ok) {
-    throw new Error(`Supabase lead insert failed with status ${response.status}`);
+    const body = await response.text();
+    throw new Error(`Supabase insert failed (${response.status}): ${body}`);
   }
 };
 
 const saveLeadViaProxy = async (lead) => {
-  // Preferred: post to the serverless proxy which uses a server-side service_role key
-  try {
-    const resp = await fetch('/api/leads-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lead)
-    });
+  const resp = await fetch('/api/leads-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lead)
+  });
 
-    if (resp.ok) return;
+  if (resp.ok) return;
 
-    // If route not found or method not allowed, signal caller to fallback
-    if (resp.status === 404 || resp.status === 405) {
-      const err = new Error('PROXY_NOT_AVAILABLE');
-      err.code = resp.status;
-      throw err;
-    }
-
-    // Other proxy failure
-    throw new Error(`Proxy insert failed with status ${resp.status}`);
-  } catch (err) {
-    // Network errors will be caught here
+  if (resp.status === 404 || resp.status === 405) {
+    const err = new Error('PROXY_NOT_AVAILABLE');
+    err.code = resp.status;
     throw err;
   }
+
+  const text = await resp.text();
+  throw new Error(`Proxy insert failed (${resp.status}): ${text || resp.statusText}`);
 };
 
 leadForm.addEventListener("submit", async (event) => {
@@ -149,20 +143,27 @@ leadForm.addEventListener("submit", async (event) => {
     try {
       await saveLeadViaProxy(lead);
     } catch (proxyErr) {
-      if (proxyErr && proxyErr.message === 'PROXY_NOT_AVAILABLE') {
-        // Proxy not deployed on this host; try direct DB if anon key is configured
+      const isProxyMissing = proxyErr && proxyErr.message === 'PROXY_NOT_AVAILABLE';
+      const proxyErrorDetails = proxyErr && proxyErr.message ? proxyErr.message : 'unknown proxy error';
+
+      if (isProxyMissing) {
         if (!isDatabaseConfigured()) {
           const message = buildWhatsappMessage(lead);
           window.open(`https://wa.me/919673000053?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-          setFormStatus("Database is not configured yet. Opening WhatsApp enquiry instead.", "error");
+          setFormStatus("Database proxy not available. Opening WhatsApp enquiry instead.", "error");
           return;
         }
         await saveLead(lead);
       } else {
-        // Proxy attempted but failed with an error (network or server). If anon key present, try direct insert as fallback
         if (isDatabaseConfigured()) {
-          await saveLead(lead);
+          try {
+            await saveLead(lead);
+          } catch (directErr) {
+            console.error('Proxy failed:', proxyErrorDetails, 'Direct Supabase failed:', directErr);
+            throw new Error(`Proxy failed: ${proxyErrorDetails}. Direct Supabase failed: ${directErr.message}`);
+          }
         } else {
+          console.error('Proxy failed:', proxyErrorDetails);
           throw proxyErr;
         }
       }

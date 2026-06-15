@@ -45,7 +45,15 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const lead = await readJsonBody(req);
+    const lead = req.body && Object.keys(req.body).length ? req.body : await readJsonBody(req);
+
+    if (!lead || !Object.keys(lead).length) {
+      throw new Error('Request body is empty or invalid JSON');
+    }
+
+    if (typeof fetch !== 'function') {
+      throw new Error('Global fetch is not available in this runtime');
+    }
 
     const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
@@ -60,6 +68,10 @@ module.exports = async (req, res) => {
     const text = await r.text();
     res.statusCode = r.status;
     res.setHeader('Content-Type', 'application/json');
+    if (!r.ok) {
+      res.end(JSON.stringify({ error: `Supabase insert failed ${r.status}`, details: text || undefined }));
+      return;
+    }
     res.end(text || JSON.stringify({ status: 'ok' }));
   } catch (err) {
     res.statusCode = 500;
