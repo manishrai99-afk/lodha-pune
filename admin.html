@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Leads Admin — 24K Realtors</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; padding: 24px; background: #f7faf6; color: #102017 }
+      h1 { margin-top: 0 }
+      #leadTable { width: 100%; border-collapse: collapse; margin-top: 12px }
+      #leadTable th, #leadTable td { border: 1px solid #e6ece6; padding: 8px; text-align: left }
+      #status { margin-top: 10px; color: #0f5d4f; font-weight: 800 }
+      .badge { display:inline-block; padding:6px 8px; background:#eef4f0; border-radius:6px; font-weight:700 }
+      .row-new { background: #fff } 
+      .container { max-width: 1100px; margin: 0 auto }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Live Leads (Admin)</h1>
+      <p>Realtime list of enquiries submitted through the website. Keep this page open to watch new leads arrive live.</p>
+
+      <div id="status" role="status">Connecting...</div>
+
+      <table id="leadTable" aria-live="polite">
+        <thead>
+          <tr>
+            <th>Received</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Requirement</th>
+            <th>Budget</th>
+            <th>Timeline</th>
+            <th>Landing Page</th>
+          </tr>
+        </thead>
+        <tbody id="leadBody"></tbody>
+      </table>
+
+      <p style="margin-top:18px;color:#5f6b68">Security note: this admin page uses the public Supabase anon key that is currently present in the site code. Replace with secure access or restrict via network policies for production.</p>
+    </div>
+
+    <script>
+      // Use same Supabase values as in script.js (replace if you want to use a different project)
+      const SUPABASE_URL = "https://vraflozbreffvniajiva.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZyYWZsb3picmVmZnZuaWFqaXZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNjA1MDIsImV4cCI6MjA5NjkzNjUwMn0.Jpza8sWU6aM_9Kz6QQN9OvbcSSLdxiHl7pl3p4iwmKo";
+
+      const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const statusEl = document.getElementById('status');
+      const leadBody = document.getElementById('leadBody');
+
+      const formatDate = (iso) => {
+        try { return new Date(iso).toLocaleString(); } catch(e) { return iso }
+      }
+
+      const renderLead = (lead) => {
+        const tr = document.createElement('tr');
+        tr.className = 'row-new';
+        tr.innerHTML = `
+          <td>${formatDate(lead.created_at || lead.inserted_at || '')}</td>
+          <td>${lead.name || ''}</td>
+          <td>${lead.phone || ''}</td>
+          <td>${lead.requirement || ''}</td>
+          <td>${lead.budget || ''}</td>
+          <td>${lead.timeline || ''}</td>
+          <td><a href="${lead.landing_page || '#'}" target="_blank" rel="noreferrer">Open</a></td>
+        `;
+        leadBody.insertBefore(tr, leadBody.firstChild);
+      }
+
+      const loadInitial = async () => {
+        statusEl.textContent = 'Loading recent leads...';
+        const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false }).limit(50);
+        if (error) {
+          statusEl.textContent = 'Could not load leads: ' + error.message;
+          return;
+        }
+        data.forEach(renderLead);
+        statusEl.textContent = 'Listening for new leads — keep this page open.';
+      }
+
+      // Subscribe to realtime inserts
+      const subscribeRealtime = async () => {
+        try {
+          const channel = supabase.channel('public:leads').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leads' }, (payload) => {
+            const newLead = payload.new;
+            renderLead(newLead);
+            // flash status
+            statusEl.textContent = 'New lead received: ' + (newLead.name || newLead.phone || '');
+            setTimeout(() => statusEl.textContent = 'Listening for new leads — keep this page open.', 6000);
+          }).subscribe();
+          return channel;
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = 'Realtime subscription failed: ' + err.message;
+        }
+      }
+
+      (async function() {
+        await loadInitial();
+        await subscribeRealtime();
+      })();
+    </script>
+  </body>
+</html>

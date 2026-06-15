@@ -40,3 +40,15 @@ https://your-project.supabase.co/rest/v1/leads
 ```
 
 No extra JavaScript package is required.
+
+## Live tracking (Admin)
+
+You can monitor incoming enquiries in real time using the included `admin.html` page.
+
+Steps:
+
+1. Open `admin.html` in the browser after deploying (or via local server).
+2. The page connects to Supabase and loads the most recent 50 leads, then subscribes to new inserts and displays them live.
+3. By default this page uses the public anon key present in `script.js`. For production, prefer to restrict keys, use network policies, or serve admin access behind authentication.
+
+Security note: The anon key allows inserts and realtime subscriptions. Do not expose a service-role key in client-side code.
