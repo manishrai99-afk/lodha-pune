@@ -19,7 +19,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>Live Leads (Admin)</h1>
+      <h1>Live Leads Admin Dashboard</h1>
       <p>Realtime list of enquiries submitted through the website. Keep this page open to watch new leads arrive live.</p>
 
       <div id="status" role="status">Connecting...</div>
@@ -39,13 +39,28 @@
         <tbody id="leadBody"></tbody>
       </table>
 
-      <p style="margin-top:18px;color:#5f6b68">Security note: this admin page uses the public Supabase anon key that is currently present in the site code. Replace with secure access or restrict via network policies for production.</p>
+      <p style="margin-top:18px;color:#5f6b68"><strong>Security:</strong> This admin page uses the Supabase anon key for reading leads. For production, consider:</p>
+      <ul style="color:#5f6b68;font-size:0.9rem;margin:8px 0">
+        <li>Use a serverless function to fetch leads with service_role_key (more secure)</li>
+        <li>Restrict anon key via RLS policies to SELECT only (not INSERT)</li>
+        <li>Protect this page behind authentication or basic auth (configure via server.js or Vercel)</li>
+        <li>Never expose service_role_key in client code</li>
+      </ul>
     </div>
 
     <script>
-      // Use same Supabase values as in script.js (replace if you want to use a different project)
+      /**
+       * Realtime Leads Dashboard
+       * 
+       * Loads initial leads from Supabase and subscribes to INSERT events
+       * for real-time updates without page refresh.
+       * 
+       * Configuration: Update SUPABASE_URL and SUPABASE_ANON_KEY below
+       * (or set as environment variables in production).
+       */
+      
       const SUPABASE_URL = "https://vfrctiuavawnteutblbd.supabase.co";
-      const SUPABASE_ANON_KEY = ""; // <-- set your anon public key here or use environment variables for production
+      const SUPABASE_ANON_KEY = ""; // Set your anon public key here or use env vars
 
       const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

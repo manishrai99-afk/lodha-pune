@@ -1,5 +1,18 @@
-// Vercel serverless function example: /api/leads-proxy
-// Expects environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+/**
+ * Vercel Serverless Function: POST /api/leads-proxy
+ * 
+ * Purpose: Secure proxy for lead submission
+ * - Receives POST requests from frontend with lead data
+ * - Forwards to Supabase using SUPABASE_SERVICE_ROLE_KEY (server-side only)
+ * - Returns response without exposing secret keys to client
+ * 
+ * Environment Variables Required:
+ * - SUPABASE_URL: Project URL (e.g., https://xxx.supabase.co)
+ * - SUPABASE_SERVICE_ROLE_KEY: Service role key from Supabase (SECRET)
+ * 
+ * Security: Service role key is stored in Vercel env vars (encrypted).
+ * Never exposed to client; never commit to Git.
+ */
 
 const readJsonBody = (req) => {
   return new Promise((resolve, reject) => {

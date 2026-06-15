@@ -1,12 +1,23 @@
+/**
+ * Lodha Pune Lead Capture - Client-Side Application
+ * 
+ * Handles form submission, tracking data collection, and lead saving to Supabase.
+ * Includes fallback logic for offline/failed proxy scenarios.
+ * 
+ * Security: Anon key can be empty; proxy will use service_role_key server-side.
+ * Never commit the actual SUPABASE_ANON_KEY; use environment variables in production.
+ */
+
 const header = document.querySelector("[data-header]");
 const menuToggle = document.querySelector("[data-menu-toggle]");
 const leadForm = document.querySelector("#leadForm");
 const formStatus = document.querySelector("[data-form-status]");
 
-// Updated Supabase project URL as requested. Provide the anon key securely.
+// Supabase Configuration (set via environment variables in production)
 const SUPABASE_URL = "https://vfrctiuavawnteutblbd.supabase.co";
-const SUPABASE_ANON_KEY = ""; // <-- paste your anon public key here or set as environment variable in production
+const SUPABASE_ANON_KEY = ""; // Leave empty; proxy uses service_role_key server-side
 const LEADS_TABLE = "leads";
+
 
 const syncHeader = () => {
   header.classList.toggle("is-scrolled", window.scrollY > 12);
