@@ -76,3 +76,22 @@ Then open `http://127.0.0.1:4173/` in your browser.
 ## Deployment Documentation
 
 See `VERCEL-DEPLOYMENT.md` for exact deployment configuration recommendations.
+
+## Work Completed
+
+This project has been prepared for production-ready deployment with the following professional deliverables:
+
+- Completed static landing page for Lodha Pune project.
+- Added high-conversion lead capture form fields: `name`, `phone`, `requirement`, `budget`, and `timeline`.
+- Added marketing sections: featured project, success stories, testimonials, FAQ, and lead incentive.
+- Included UTM and referral tracking support for source attribution.
+- Added Supabase lead capture flow with WhatsApp fallback.
+- Added local preview server for development.
+- Added deployment documentation and Vercel configuration guidance.
+
+## Next Steps
+
+1. Import this repository into Vercel using the `Other` / `Static Site` preset.
+2. Configure environment variables for Supabase in Vercel rather than hardcoding keys.
+3. Verify lead capture by updating `script.js` with production Supabase credentials.
+4. Launch the site and validate the contact form flow.
