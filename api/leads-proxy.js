@@ -1,6 +1,5 @@
 // Vercel serverless function example: /api/leads-proxy
 // Expects environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
-const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -21,6 +20,7 @@ module.exports = async (req, res) => {
   const lead = req.body || {};
 
   try {
+    // Use native global fetch available in modern Node.js (Vercel runtime)
     const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: {
