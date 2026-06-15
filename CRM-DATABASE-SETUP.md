@@ -52,3 +52,30 @@ Steps:
 3. By default this page uses the public anon key present in `script.js`. For production, prefer to restrict keys, use network policies, or serve admin access behind authentication.
 
 Security note: The anon key allows inserts and realtime subscriptions. Do not expose a service-role key in client-side code.
+
+## Local testing and admin protection
+
+- For local testing, you can enable simple Basic Auth for the included preview server by setting two environment variables before running `server.js`:
+
+	- `ADMIN_USER` — username for admin access
+	- `ADMIN_PASS` — password for admin access
+
+	Example (PowerShell):
+
+	```powershell
+	$env:ADMIN_USER = "admin"; $env:ADMIN_PASS = "s3cret"; node server.js
+	```
+
+	When these are set, requests to `/admin.html` (and paths starting with `/admin`) will require Basic Auth.
+
+## Vercel / Production
+
+- In Vercel, add the following Environment Variables in Project Settings → Environment Variables:
+
+	- `SUPABASE_URL` = your project URL (e.g. `https://...supabase.co`)
+	- `SUPABASE_ANON_KEY` = your anon public key
+	- Optionally: `ADMIN_USER` and `ADMIN_PASS` if you deploy the preview server or use server-side auth
+
+- Prefer gating `admin.html` behind a proper auth layer (serverless function, password-protect, or platform access controls) rather than relying only on a client-visible key.
+
+If you want, I can add a simple serverless auth gateway or convert `admin.html` into a server-rendered admin UI behind login.

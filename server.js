@@ -19,6 +19,22 @@ const server = http.createServer((request, response) => {
   let pathname = decodeURIComponent((request.url || "/").split("?")[0]);
   if (pathname === "/") pathname = "/index.html";
 
+  // Basic auth for admin page when ADMIN_USER and ADMIN_PASS are set in env
+  const adminUser = process.env.ADMIN_USER || "";
+  const adminPass = process.env.ADMIN_PASS || "";
+  const authEnabled = adminUser && adminPass;
+  const requiresAdminAuth = authEnabled && (pathname === "/admin.html" || pathname.startsWith("/admin"));
+
+  if (requiresAdminAuth) {
+    const auth = request.headers.authorization || "";
+    const expected = "Basic " + Buffer.from(`${adminUser}:${adminPass}`).toString("base64");
+    if (auth !== expected) {
+      response.writeHead(401, { "WWW-Authenticate": 'Basic realm="Admin Area"' });
+      response.end("Authentication required");
+      return;
+    }
+  }
+
   const filePath = path.resolve(root, `.${pathname}`);
   if (!filePath.startsWith(root)) {
     response.writeHead(403);
