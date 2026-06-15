@@ -95,6 +95,32 @@ const saveLead = async (lead) => {
   }
 };
 
+const saveLeadViaProxy = async (lead) => {
+  // Preferred: post to the serverless proxy which uses a server-side service_role key
+  try {
+    const resp = await fetch('/api/leads-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lead)
+    });
+
+    if (resp.ok) return;
+
+    // If route not found or method not allowed, signal caller to fallback
+    if (resp.status === 404 || resp.status === 405) {
+      const err = new Error('PROXY_NOT_AVAILABLE');
+      err.code = resp.status;
+      throw err;
+    }
+
+    // Other proxy failure
+    throw new Error(`Proxy insert failed with status ${resp.status}`);
+  } catch (err) {
+    // Network errors will be caught here
+    throw err;
+  }
+};
+
 leadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(leadForm);
@@ -119,14 +145,28 @@ leadForm.addEventListener("submit", async (event) => {
   submitButton.textContent = "Saving...";
 
   try {
-    if (!isDatabaseConfigured()) {
-      const message = buildWhatsappMessage(lead);
-      window.open(`https://wa.me/919673000053?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-      setFormStatus("Database is not configured yet. Opening WhatsApp enquiry instead.", "error");
-      return;
+    // Try serverless proxy first (recommended). If proxy not available, fall back to direct Supabase
+    try {
+      await saveLeadViaProxy(lead);
+    } catch (proxyErr) {
+      if (proxyErr && proxyErr.message === 'PROXY_NOT_AVAILABLE') {
+        // Proxy not deployed on this host; try direct DB if anon key is configured
+        if (!isDatabaseConfigured()) {
+          const message = buildWhatsappMessage(lead);
+          window.open(`https://wa.me/919673000053?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+          setFormStatus("Database is not configured yet. Opening WhatsApp enquiry instead.", "error");
+          return;
+        }
+        await saveLead(lead);
+      } else {
+        // Proxy attempted but failed with an error (network or server). If anon key present, try direct insert as fallback
+        if (isDatabaseConfigured()) {
+          await saveLead(lead);
+        } else {
+          throw proxyErr;
+        }
+      }
     }
-
-    await saveLead(lead);
     leadForm.reset();
     setFormStatus("Enquiry saved. Our team will contact you shortly.");
   } catch (error) {
