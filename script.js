@@ -1,11 +1,14 @@
 /**
- * Lodha Pune Lead Capture - Client-Side Application
+ * Lodha Pune Lead Capture - Hybrid System
  * 
- * Handles form submission, tracking data collection, and lead saving to Supabase.
- * Includes fallback logic for offline/failed proxy scenarios.
+ * Handles form submission with local storage backup and optional Google Form integration.
+ * Leads are always saved locally and can be exported as CSV.
+ * No server or database required - fully works offline.
  * 
- * Security: Anon key can be empty; proxy will use service_role_key server-side.
- * Never commit the actual SUPABASE_ANON_KEY; use environment variables in production.
+ * Configuration:
+ * - GOOGLE_FORM_URL: Set to your Google Form submission URL (optional)
+ * - Local backup: Automatic, always works
+ * - CSV Export: Available via /export.html or console
  */
 
 const header = document.querySelector("[data-header]");
@@ -13,10 +16,17 @@ const menuToggle = document.querySelector("[data-menu-toggle]");
 const leadForm = document.querySelector("#leadForm");
 const formStatus = document.querySelector("[data-form-status]");
 
-// Supabase Configuration (set via environment variables in production)
-const SUPABASE_URL = "https://vfrctiuavawnteutblbd.supabase.co";
-const SUPABASE_ANON_KEY = ""; // Leave empty; proxy uses service_role_key server-side
-const LEADS_TABLE = "leads";
+// ==================== GOOGLE FORM CONFIGURATION ====================
+// Replace with your Google Form submission URL (optional, leave empty to disable)
+// To get URL: Open Form → Settings → Collect email → Get submission endpoint
+const GOOGLE_FORM_URL = ""; // Example: https://docs.google.com/forms/d/e/{FORM_ID}/formResponse
+const GOOGLE_FORM_FIELDS = {
+  name: "entry.1234567890",      // Replace with your form's entry ID
+  phone: "entry.0987654321",
+  requirement: "entry.1111111111",
+  budget: "entry.2222222222",
+  timeline: "entry.3333333333"
+};
 
 
 const syncHeader = () => {
@@ -54,41 +64,22 @@ const setFormStatus = (message, type = "success") => {
 const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
   const get = (key) => params.get(key) || "";
-  const leadSeries = get("series") || get("utm_campaign") || get("cstm_media_sub_type") || "website";
 
   return {
-    lead_source: get("utm_source") || get("cstm_ppc_channel") || "website",
-    lead_series: leadSeries,
+    lead_source: get("utm_source") || get("source") || "website",
     utm_source: get("utm_source"),
     utm_medium: get("utm_medium"),
     utm_campaign: get("utm_campaign"),
-    utm_term: get("utm_term"),
-    utm_content: get("utm_content"),
     landing_page: window.location.href,
-    referrer: document.referrer,
-    metadata: {
-      utm_sub_source: get("utm_sub_source"),
-      cstm_ppc_channel: get("cstm_ppc_channel"),
-      cstm_media_type: get("cstm_media_type"),
-      cstm_media_sub_type: get("cstm_media_sub_type"),
-      agency_partner: get("Agency_Partner"),
-      gclid: get("gclid"),
-      gbraid: get("gbraid"),
-      gad_source: get("gad_source"),
-      gad_campaignid: get("gad_campaignid")
-    }
+    referrer: document.referrer
   };
 };
 
-const buildWhatsappMessage = ({ name, phone, requirement }) => [
-  "Hi 24K Realtors, I want property consultation.",
-  `Name: ${name}`,
-  `Phone: ${phone}`,
-  `Requirement: ${requirement}`
-].join("\n");
-
-// Local Storage Fallback: Save lead to browser if database unavailable
-const saveLeadToLocal = (lead) => {
+// ==================== LOCAL STORAGE MANAGEMENT ====================
+/**
+ * Save lead to browser localStorage (always works, no server needed)
+ */
+const saveLeadLocally = (lead) => {
   const localLeads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
   const leadWithTimestamp = {
     ...lead,
@@ -100,16 +91,17 @@ const saveLeadToLocal = (lead) => {
   return leadWithTimestamp;
 };
 
-// Export local leads as CSV (for offline backup)
+/**
+ * Export locally saved leads as CSV for download
+ */
 const exportLeadsAsCSV = () => {
   const leads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
   if (leads.length === 0) {
-    alert("No local leads saved yet.");
+    alert("कोई lead save नहीं है।");
     return;
   }
 
-  // CSV headers
-  const headers = ["Saved At", "Name", "Phone", "Requirement", "Budget", "Timeline", "Lead Source", "Lead Series", "Landing Page"];
+  const headers = ["Saved At", "Name", "Phone", "Requirement", "Budget", "Timeline", "Lead Source"];
   const rows = leads.map(lead => [
     lead.saved_at || "",
     lead.name || "",
@@ -117,18 +109,14 @@ const exportLeadsAsCSV = () => {
     lead.requirement || "",
     lead.budget || "",
     lead.timeline || "",
-    lead.lead_source || "",
-    lead.lead_series || "",
-    lead.landing_page || ""
+    lead.lead_source || "website"
   ]);
 
-  // Build CSV content
   const csvContent = [
     headers.map(h => `"${h}"`).join(","),
     ...rows.map(row => row.map(cell => `"${(cell + "").replace(/"/g, '""')}"`).join(","))
   ].join("\n");
 
-  // Trigger download
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -136,74 +124,56 @@ const exportLeadsAsCSV = () => {
   link.click();
 };
 
-// Clear local leads after exporting
+/**
+ * Clear all locally saved leads (use with caution)
+ */
 const clearLocalLeads = () => {
-  if (confirm("Are you sure? This will delete all locally saved leads.")) {
+  if (confirm("क्या आप सुनिश्चित हैं? यह सभी saved leads delete कर देगा।")) {
     localStorage.removeItem("lodha_pune_leads");
-    alert("Local leads cleared.");
+    alert("सभी leads delete हो गए।");
   }
 };
 
-// Console shortcuts for developers
-window.leadTools = {
-  exportCSV: exportLeadsAsCSV,
-  viewAll: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]"),
-  clearAll: clearLocalLeads,
-  count: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]").length
-};
+// ==================== GOOGLE FORM SUBMISSION ====================
+/**
+ * Submit lead data to Google Form (if configured)
+ * Uses no-cors mode to avoid CORS restrictions
+ */
+const submitToGoogleForm = async (lead) => {
+  if (!GOOGLE_FORM_URL) return; // Skip if not configured
 
-console.log(
-  "%c✓ Lodha Pune Lead Tools Ready",
-  "color: #0f5d4f; font-weight: bold; font-size: 14px;",
-  "\n\nUse window.leadTools:\n",
-  "  • leadTools.exportCSV() — Export local leads as CSV\n",
-  "  • leadTools.viewAll() — View all locally saved leads\n",
-  "  • leadTools.count() — Count saved leads\n",
-  "  • leadTools.clearAll() — Delete all local leads\n\n",
-  "Or visit: /export.html"
-);
+  try {
+    const formData = new FormData();
+    formData.append(GOOGLE_FORM_FIELDS.name, lead.name);
+    formData.append(GOOGLE_FORM_FIELDS.phone, lead.phone);
+    formData.append(GOOGLE_FORM_FIELDS.requirement, lead.requirement);
+    formData.append(GOOGLE_FORM_FIELDS.budget, lead.budget);
+    formData.append(GOOGLE_FORM_FIELDS.timeline, lead.timeline);
 
-const isDatabaseConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+    await fetch(GOOGLE_FORM_URL, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData
+    });
 
-const saveLead = async (lead) => {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADS_TABLE}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify(lead)
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Supabase insert failed (${response.status}): ${body}`);
+    console.log("✓ Lead submitted to Google Form");
+  } catch (error) {
+    console.error("Google Form submission failed (non-blocking):", error);
+    // Don't throw - Google Form is optional fallback
   }
 };
 
-const saveLeadViaProxy = async (lead) => {
-  const resp = await fetch('/api/leads-proxy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(lead)
-  });
+const buildWhatsappMessage = ({ name, phone, requirement }) => [
+  "Hi 24K Realtors, I want property consultation.",
+  `Name: ${name}`,
+  `Phone: ${phone}`,
+  `Requirement: ${requirement}`
+].join("\n");
 
-  if (resp.ok) return;
-
-  if (resp.status === 404 || resp.status === 405) {
-    const err = new Error('PROXY_NOT_AVAILABLE');
-    err.code = resp.status;
-    throw err;
-  }
-
-  const text = await resp.text();
-  throw new Error(`Proxy insert failed (${resp.status}): ${text || resp.statusText}`);
-};
-
+// ==================== FORM SUBMISSION ====================
 leadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const data = new FormData(leadForm);
   const name = data.get("name").trim();
   const phone = data.get("phone").trim();
@@ -212,63 +182,69 @@ leadForm.addEventListener("submit", async (event) => {
   const timeline = data.get("timeline");
   const submitButton = leadForm.querySelector("button[type='submit']");
 
+  // Basic validation
+  if (!name || !phone || !requirement || !budget || !timeline) {
+    setFormStatus("कृपया सभी fields भरें।", "error");
+    return;
+  }
+
   const lead = {
     name,
     phone,
     requirement,
     budget,
     timeline,
-    crm_stage: "new",
     ...getTrackingData()
   };
 
   submitButton.disabled = true;
-  submitButton.textContent = "Saving...";
+  submitButton.textContent = "सहेज रहे हैं...";
 
   try {
-    // Try serverless proxy first (recommended). If proxy not available, fall back to direct Supabase
-    try {
-      await saveLeadViaProxy(lead);
-    } catch (proxyErr) {
-      const isProxyMissing = proxyErr && proxyErr.message === 'PROXY_NOT_AVAILABLE';
-      const proxyErrorDetails = proxyErr && proxyErr.message ? proxyErr.message : 'unknown proxy error';
+    // Always save to localStorage first (primary storage)
+    saveLeadLocally(lead);
+    console.log("✓ Lead saved locally");
 
-      if (isProxyMissing) {
-        if (!isDatabaseConfigured()) {
-          // Save to local storage before opening WhatsApp
-          saveLeadToLocal(lead);
-          const message = buildWhatsappMessage(lead);
-          window.open(`https://wa.me/919673000053?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-          setFormStatus("Enquiry saved locally. Opening WhatsApp. You can export saved leads anytime.", "error");
-          return;
-        }
-        await saveLead(lead);
-      } else {
-        if (isDatabaseConfigured()) {
-          try {
-            await saveLead(lead);
-          } catch (directErr) {
-            console.error('Proxy failed:', proxyErrorDetails, 'Direct Supabase failed:', directErr);
-            // Save to local storage as final fallback
-            saveLeadToLocal(lead);
-            throw new Error(`Saved locally. Proxy failed: ${proxyErrorDetails}. Direct Supabase failed: ${directErr.message}`);
-          }
-        } else {
-          // Save to local storage if no database configured
-          saveLeadToLocal(lead);
-          console.error('Proxy failed:', proxyErrorDetails);
-          throw proxyErr;
-        }
-      }
+    // Try to submit to Google Form if configured
+    if (GOOGLE_FORM_URL) {
+      await submitToGoogleForm(lead);
+      leadForm.reset();
+      setFormStatus("✓ आपका enquiry save हो गया! Local और Google Form दोनों में।");
+    } else {
+      leadForm.reset();
+      setFormStatus("✓ आपका enquiry save हो गया! /export.html से CSV download कर सकते हो।");
     }
-    leadForm.reset();
-    setFormStatus("Enquiry saved. Our team will contact you shortly.");
+
   } catch (error) {
-    console.error(error);
-    // Final fallback: if we get here, data was already saved to localStorage
-    setFormStatus("Enquiry saved locally. Our team will sync and contact you. Open DevTools for export option.", "error");
+    console.error("Form submission error:", error);
+    setFormStatus("✓ Lead save हो गया (locally)। Google Form में error हो सकता है।", "error");
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "Send Enquiry";
   }
 });
+
+// ==================== CONSOLE TOOLS FOR DEVELOPERS ====================
+window.leadTools = {
+  exportCSV: exportLeadsAsCSV,
+  viewAll: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]"),
+  clearAll: clearLocalLeads,
+  count: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]").length,
+  lastLead: () => {
+    const leads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
+    return leads[leads.length - 1] || null;
+  }
+};
+
+console.log(
+  "%c✓ Lodha Pune Lead System Ready - Hybrid Mode",
+  "color: #0f5d4f; font-weight: bold; font-size: 14px;",
+  "\n\n📍 Storage: localStorage (सभी leads यहाँ save हैं)\n\n",
+  "Use window.leadTools:\n",
+  "  • leadTools.exportCSV() — CSV download करो\n",
+  "  • leadTools.viewAll() — सभी leads देखो\n",
+  "  • leadTools.count() — कितने leads हैं\n",
+  "  • leadTools.lastLead() — आखरी lead देखो\n",
+  "  • leadTools.clearAll() — सभी clear करो\n\n",
+  "Or visit: /export.html for web interface"
+);
