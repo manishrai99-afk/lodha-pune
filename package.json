@@ -1,0 +1,11 @@
+{
+  "name": "24k-lodha-pune",
+  "version": "1.0.0",
+  "description": "24K Realtors Lodha Pune landing page and lead tracking system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {}
+}

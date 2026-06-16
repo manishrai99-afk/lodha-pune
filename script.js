@@ -16,9 +16,13 @@ const menuToggle = document.querySelector("[data-menu-toggle]");
 const leadForm = document.querySelector("#leadForm");
 const formStatus = document.querySelector("[data-form-status]");
 
+// ==================== DATABASE & FALLBACK CONFIGURATION ====================
+// (Optional) If you want the frontend to fall back to direct Supabase calls in case the proxy server fails.
+const SUPABASE_URL = "";       // Example: https://your-project.supabase.co
+const SUPABASE_ANON_KEY = "";  // Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
 // ==================== GOOGLE FORM CONFIGURATION ====================
 // Replace with your Google Form submission URL (optional, leave empty to disable)
-// To get URL: Open Form → Settings → Collect email → Get submission endpoint
 const GOOGLE_FORM_URL = ""; // Example: https://docs.google.com/forms/d/e/{FORM_ID}/formResponse
 const GOOGLE_FORM_FIELDS = {
   name: "entry.1234567890",      // Replace with your form's entry ID
@@ -198,29 +202,86 @@ leadForm.addEventListener("submit", async (event) => {
   };
 
   submitButton.disabled = true;
-  submitButton.textContent = "सहेज रहे हैं...";
+  submitButton.textContent = "भेज रहे हैं...";
+
+  let savedToDb = false;
 
   try {
-    // Always save to localStorage first (primary storage)
-    saveLeadLocally(lead);
-    console.log("✓ Lead saved locally");
+    // 1. Try to POST to backend
+    const res = await fetch("/api/leads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(lead)
+    });
 
-    // Try to submit to Google Form if configured
-    if (GOOGLE_FORM_URL) {
-      await submitToGoogleForm(lead);
-      leadForm.reset();
-      setFormStatus("✓ आपका enquiry save हो गया! Local और Google Form दोनों में।");
+    if (res.ok) {
+      savedToDb = true;
+      console.log("✓ Lead saved to backend database");
     } else {
-      leadForm.reset();
-      setFormStatus("✓ आपका enquiry save हो गया! /export.html से CSV download कर सकते हो।");
+      console.warn("Backend DB save returned non-OK status:", res.status);
     }
+  } catch (err) {
+    console.warn("Backend DB save failed (offline or network error):", err);
+  }
 
+  // 2. Direct Supabase Fallback (if backend failed and anon key configured)
+  if (!savedToDb && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify(lead)
+      });
+      if (response.ok) {
+        savedToDb = true;
+        console.log("✓ Lead saved directly to Supabase fallback");
+      } else {
+        console.warn("Direct Supabase insert failed:", response.status);
+      }
+    } catch (supErr) {
+      console.warn("Direct Supabase insert error:", supErr);
+    }
+  }
+
+  // 3. Handle result status
+  try {
+    if (savedToDb) {
+      // Also try optional Google Form if configured
+      if (GOOGLE_FORM_URL) {
+        await submitToGoogleForm(lead);
+      }
+      leadForm.reset();
+      setFormStatus("✓ आपका enquiry सफलतापूर्वक दर्ज हो गया है! हमारी टीम आपसे जल्द ही संपर्क करेगी।");
+    } else {
+      // Save to localStorage as local backup if database failed
+      saveLeadLocally(lead);
+      console.log("✓ Lead saved locally (offline backup)");
+      
+      leadForm.reset();
+      
+      // Build WhatsApp link for instant fallback
+      const whatsappMsg = encodeURIComponent(buildWhatsappMessage(lead));
+      const whatsappUrl = `https://wa.me/919673000053?text=${whatsappMsg}`;
+      
+      setFormStatus("✓ आपका enquiry local backup में save हो गया है। तुरंत संपर्क करने के लिए WhatsApp बटन दबाएं।", "error");
+      
+      // Open WhatsApp fallback after a short delay
+      setTimeout(() => {
+        window.open(whatsappUrl, '_blank');
+      }, 1500);
+    }
   } catch (error) {
-    console.error("Form submission error:", error);
-    setFormStatus("✓ Lead save हो गया (locally)। Google Form में error हो सकता है।", "error");
+    console.error("Form handling error:", error);
+    setFormStatus("✓ Lead save हो गया (locally)।", "error");
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = "Send Enquiry";
+    submitButton.textContent = "Book Free Property Advice";
   }
 });
 
