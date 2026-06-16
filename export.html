@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Export Local Leads — 24K Realtors</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        background: #f7faf6;
+        color: #102017;
+        padding: 24px;
+        margin: 0;
+      }
+      .container { max-width: 800px; margin: 0 auto; }
+      h1 { margin-top: 0; }
+      .leads-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        background: white;
+        border: 1px solid #e6ece6;
+      }
+      .leads-table th, .leads-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e6ece6;
+      }
+      .leads-table th { background: #eef4f0; font-weight: 700; }
+      .leads-table tbody tr:hover { background: #fafbfa; }
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn-primary {
+        background: #0f5d4f;
+        color: white;
+      }
+      .btn-primary:hover { background: #0a3e2f; }
+      .btn-danger {
+        background: #c44536;
+        color: white;
+      }
+      .btn-danger:hover { background: #a23028; }
+      .btn-secondary {
+        background: #eef4f0;
+        color: #0f5d4f;
+      }
+      .btn-secondary:hover { background: #ddeee7; }
+      .status { padding: 12px; border-radius: 6px; margin: 12px 0; }
+      .status.success { background: #dbeae3; color: #0a3e2f; }
+      .status.error { background: #f4d8d0; color: #a23028; }
+      .status.info { background: #eef4f0; color: #0f5d4f; }
+      @media (max-width: 600px) {
+        .leads-table { font-size: 13px; }
+        .leads-table th, .leads-table td { padding: 8px; }
+        button { padding: 8px 14px; font-size: 13px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Local Leads Export</h1>
+      <p>Manage and export enquiries saved locally on this device when the server was unavailable.</p>
+
+      <div id="status"></div>
+
+      <div class="button-group">
+        <button class="btn-primary" onclick="exportLeadsAsCSV()">📥 Export as CSV</button>
+        <button class="btn-secondary" onclick="reloadLeads()">🔄 Refresh</button>
+        <button class="btn-danger" onclick="clearLocalLeads()">🗑️ Clear All</button>
+      </div>
+
+      <table class="leads-table" id="leadsTable">
+        <thead>
+          <tr>
+            <th>Saved At</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Requirement</th>
+            <th>Budget</th>
+            <th>Timeline</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody">
+          <tr><td colspan="6" style="text-align: center; padding: 20px; color: #5f6b68;">Loading...</td></tr>
+        </tbody>
+      </table>
+
+      <p style="color: #5f6b68; font-size: 13px;">
+        <strong>How to use:</strong> These are enquiries saved on your device when the database was unavailable. 
+        Click "Export as CSV" to download all leads as an Excel file, then upload to your CRM. 
+        Leads are removed after clearing.
+      </p>
+    </div>
+
+    <script>
+      const reloadLeads = () => {
+        const leads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
+        const tbody = document.getElementById("leadsBody");
+        const status = document.getElementById("status");
+
+        if (leads.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #5f6b68;">No local leads saved yet.</td></tr>';
+          status.innerHTML = '<div class="status info">✓ All enquiries are being saved to the cloud database.</div>';
+          return;
+        }
+
+        tbody.innerHTML = leads.map(lead => `
+          <tr>
+            <td>${new Date(lead.saved_at).toLocaleString()}</td>
+            <td>${lead.name || "—"}</td>
+            <td>${lead.phone || "—"}</td>
+            <td>${lead.requirement || "—"}</td>
+            <td>${lead.budget || "—"}</td>
+            <td>${lead.timeline || "—"}</td>
+          </tr>
+        `).join("");
+
+        status.innerHTML = `<div class="status success">✓ ${leads.length} lead(s) saved locally. Export and sync to your CRM.</div>`;
+      };
+
+      const exportLeadsAsCSV = () => {
+        const leads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
+        if (leads.length === 0) {
+          alert("No local leads to export.");
+          return;
+        }
+
+        const headers = ["Saved At", "Name", "Phone", "Requirement", "Budget", "Timeline", "Lead Source", "Lead Series"];
+        const rows = leads.map(lead => [
+          lead.saved_at || "",
+          lead.name || "",
+          lead.phone || "",
+          lead.requirement || "",
+          lead.budget || "",
+          lead.timeline || "",
+          lead.lead_source || "",
+          lead.lead_series || ""
+        ]);
+
+        const csvContent = [
+          headers.map(h => `"${h}"`).join(","),
+          ...rows.map(row => row.map(cell => `"${(cell + "").replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `lodha-pune-leads-${new Date().toISOString().split("T")[0]}.csv`;
+        link.click();
+
+        document.getElementById("status").innerHTML = '<div class="status success">✓ Export complete. Check your Downloads folder.</div>';
+      };
+
+      const clearLocalLeads = () => {
+        if (confirm("This will delete all locally saved leads. Continue?")) {
+          localStorage.removeItem("lodha_pune_leads");
+          document.getElementById("status").innerHTML = '<div class="status success">✓ Local leads cleared.</div>';
+          reloadLeads();
+        }
+      };
+
+      // Load leads on page open
+      reloadLeads();
+    </script>
+  </body>
+</html>

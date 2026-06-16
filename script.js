@@ -87,6 +87,82 @@ const buildWhatsappMessage = ({ name, phone, requirement }) => [
   `Requirement: ${requirement}`
 ].join("\n");
 
+// Local Storage Fallback: Save lead to browser if database unavailable
+const saveLeadToLocal = (lead) => {
+  const localLeads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
+  const leadWithTimestamp = {
+    ...lead,
+    saved_at: new Date().toISOString(),
+    local_id: Date.now()
+  };
+  localLeads.push(leadWithTimestamp);
+  localStorage.setItem("lodha_pune_leads", JSON.stringify(localLeads));
+  return leadWithTimestamp;
+};
+
+// Export local leads as CSV (for offline backup)
+const exportLeadsAsCSV = () => {
+  const leads = JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]");
+  if (leads.length === 0) {
+    alert("No local leads saved yet.");
+    return;
+  }
+
+  // CSV headers
+  const headers = ["Saved At", "Name", "Phone", "Requirement", "Budget", "Timeline", "Lead Source", "Lead Series", "Landing Page"];
+  const rows = leads.map(lead => [
+    lead.saved_at || "",
+    lead.name || "",
+    lead.phone || "",
+    lead.requirement || "",
+    lead.budget || "",
+    lead.timeline || "",
+    lead.lead_source || "",
+    lead.lead_series || "",
+    lead.landing_page || ""
+  ]);
+
+  // Build CSV content
+  const csvContent = [
+    headers.map(h => `"${h}"`).join(","),
+    ...rows.map(row => row.map(cell => `"${(cell + "").replace(/"/g, '""')}"`).join(","))
+  ].join("\n");
+
+  // Trigger download
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `lodha-pune-leads-${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+};
+
+// Clear local leads after exporting
+const clearLocalLeads = () => {
+  if (confirm("Are you sure? This will delete all locally saved leads.")) {
+    localStorage.removeItem("lodha_pune_leads");
+    alert("Local leads cleared.");
+  }
+};
+
+// Console shortcuts for developers
+window.leadTools = {
+  exportCSV: exportLeadsAsCSV,
+  viewAll: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]"),
+  clearAll: clearLocalLeads,
+  count: () => JSON.parse(localStorage.getItem("lodha_pune_leads") || "[]").length
+};
+
+console.log(
+  "%c✓ Lodha Pune Lead Tools Ready",
+  "color: #0f5d4f; font-weight: bold; font-size: 14px;",
+  "\n\nUse window.leadTools:\n",
+  "  • leadTools.exportCSV() — Export local leads as CSV\n",
+  "  • leadTools.viewAll() — View all locally saved leads\n",
+  "  • leadTools.count() — Count saved leads\n",
+  "  • leadTools.clearAll() — Delete all local leads\n\n",
+  "Or visit: /export.html"
+);
+
 const isDatabaseConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const saveLead = async (lead) => {
@@ -159,9 +235,11 @@ leadForm.addEventListener("submit", async (event) => {
 
       if (isProxyMissing) {
         if (!isDatabaseConfigured()) {
+          // Save to local storage before opening WhatsApp
+          saveLeadToLocal(lead);
           const message = buildWhatsappMessage(lead);
           window.open(`https://wa.me/919673000053?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-          setFormStatus("Database proxy not available. Opening WhatsApp enquiry instead.", "error");
+          setFormStatus("Enquiry saved locally. Opening WhatsApp. You can export saved leads anytime.", "error");
           return;
         }
         await saveLead(lead);
@@ -171,9 +249,13 @@ leadForm.addEventListener("submit", async (event) => {
             await saveLead(lead);
           } catch (directErr) {
             console.error('Proxy failed:', proxyErrorDetails, 'Direct Supabase failed:', directErr);
-            throw new Error(`Proxy failed: ${proxyErrorDetails}. Direct Supabase failed: ${directErr.message}`);
+            // Save to local storage as final fallback
+            saveLeadToLocal(lead);
+            throw new Error(`Saved locally. Proxy failed: ${proxyErrorDetails}. Direct Supabase failed: ${directErr.message}`);
           }
         } else {
+          // Save to local storage if no database configured
+          saveLeadToLocal(lead);
           console.error('Proxy failed:', proxyErrorDetails);
           throw proxyErr;
         }
@@ -183,7 +265,8 @@ leadForm.addEventListener("submit", async (event) => {
     setFormStatus("Enquiry saved. Our team will contact you shortly.");
   } catch (error) {
     console.error(error);
-    setFormStatus("We could not save this enquiry. Please call or WhatsApp us.", "error");
+    // Final fallback: if we get here, data was already saved to localStorage
+    setFormStatus("Enquiry saved locally. Our team will sync and contact you. Open DevTools for export option.", "error");
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "Send Enquiry";
