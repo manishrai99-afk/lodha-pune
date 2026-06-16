@@ -34,6 +34,8 @@ node server.js
   - Supabase PostgreSQL backend with Row-Level Security
   - Serverless proxy (`/api/leads-proxy`) protects service role keys
   - Client-side RLS policies: anon can INSERT, authenticated can SELECT
+  - **Local backup**: Automatically saves leads to browser if database unavailable
+  - **Export anytime**: Download all leads as CSV for manual CRM sync
 
 - **📱 Mobile-First Responsive Design**
   - Tested on 320px (mobile), 720px (tablet), 1040px+ (desktop)
@@ -63,6 +65,7 @@ node server.js
 |----------|---------|
 | [**ARCHITECTURE.md**](ARCHITECTURE.md) | System design, data flow, security topology, deployment diagram |
 | [**DEPLOYMENT_CHECKLIST.md**](DEPLOYMENT_CHECKLIST.md) | Step-by-step production deployment guide for Vercel + Supabase |
+| [**LOCAL-BACKUP-GUIDE.md**](LOCAL-BACKUP-GUIDE.md) | Local lead backup feature, CSV export, offline resilience |
 | [**CRM-DATABASE-SETUP.md**](CRM-DATABASE-SETUP.md) | Supabase database setup, migrations, RLS policies |
 | [**VERCEL-DEPLOYMENT.md**](VERCEL-DEPLOYMENT.md) | Vercel configuration and environment variables |
 | [**.agent.md**](.agent.md) | Agent behavior and standards for this repository |
@@ -73,8 +76,9 @@ node server.js
 lodha-pune/
 ├── index.html              # Landing page (hero, form, features, testimonials, FAQ)
 ├── admin.html              # Realtime leads dashboard (Supabase WebSocket)
+├── export.html             # Export locally saved leads as CSV
 ├── styles.css              # Responsive design (mobile-first, CSS Grid/Flexbox)
-├── script.js               # Form submission, tracking, Supabase integration
+├── script.js               # Form submission, tracking, Supabase integration, local backup
 ├── server.js               # Local dev server with optional Basic Auth for /admin.html
 │
 ├── api/
@@ -89,6 +93,7 @@ lodha-pune/
 ├── README.md               # This file
 ├── ARCHITECTURE.md         # Detailed system design
 ├── DEPLOYMENT_CHECKLIST.md # Production deployment steps
+├── LOCAL-BACKUP-GUIDE.md   # Local lead backup and CSV export
 ├── CRM-DATABASE-SETUP.md   # Database configuration
 ├── VERCEL-DEPLOYMENT.md    # Vercel setup guide
 ├── .agent.md               # Agent configuration for this repo
@@ -157,17 +162,21 @@ User fills form (name, phone, requirement, budget, timeline)
 Form submit → script.js
   ↓
 Try POST to /api/leads-proxy
-  ├─ Success → Store in Supabase → Show "Enquiry saved" message
+  ├─ Success → Store in Supabase → Show "Enquiry saved" message ✓
   │
   └─ Failure (404/505 or network error)
      ├─ If SUPABASE_ANON_KEY configured
      │  → Try direct Supabase INSERT
-     │     ├─ Success → Show "Enquiry saved"
+     │     ├─ Success → Show "Enquiry saved" ✓
      │     └─ Failure → Fall through
      │
-     └─ Open WhatsApp fallback link (919673000053)
-        Show "Please call or WhatsApp" error message
+     └─ Save to browser localStorage (automatic backup)
+        ├─ Show: "Enquiry saved locally"
+        ├─ Offer WhatsApp fallback
+        └─ User can export CSV anytime at /export.html
 ```
+
+**Offline Resilience**: Leads are **never lost**, even if the database is unavailable. They are automatically saved to the visitor's browser and can be exported as CSV for manual CRM sync.
 
 ## Database Schema
 
@@ -286,7 +295,31 @@ The `leads` table in Supabase:
 
 - **Vercel**: Monitor Function logs and performance metrics
 - **Supabase**: View `leads` table in Table Editor, check RLS audit logs
+- **Local Backups**: Check `/export.html` weekly for accumulated offline submissions
 - **Optional**: Integrate Sentry or LogRocket for error tracking
+
+### Exporting Offline Leads
+
+If you notice leads accumulating in local storage (due to server downtime):
+
+1. **Visit**: https://lodha-pune.vercel.app/export.html
+2. **Export**: Click "📥 Export as CSV"
+3. **Sync**: Upload CSV to Supabase Table Editor or API
+4. **Clear**: Click "🗑️ Clear All" after confirming sync
+
+**Console Access** (for developers):
+```javascript
+// View all locally saved leads
+window.leadTools.viewAll()
+
+// Export as CSV
+window.leadTools.exportCSV()
+
+// Count saved leads
+window.leadTools.count()
+```
+
+See [LOCAL-BACKUP-GUIDE.md](LOCAL-BACKUP-GUIDE.md) for detailed backup management.
 
 ## Contributing
 
