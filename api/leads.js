@@ -1,10 +1,10 @@
 /**
- * Vercel Serverless Function: GET/PATCH/POST /api/leads
+ * Vercel Serverless Function: GET/PATCH/POST /api/leads — Enterprise RBAC Edition
  * 
- * Secure entry point for managing leads in production.
- * - POST /api/leads: Insert a lead (public, no auth required)
- * - GET /api/leads: Fetch all leads (admin only, requires AUTHORIZATION header)
- * - PATCH /api/leads: Update lead stage (admin only, requires AUTHORIZATION header)
+ * Secure entry point for managing leads in production on Vercel.
+ * - POST /api/leads: Submit Lead (Public, no auth)
+ * - GET /api/leads: Fetch Leads (Protected, Admin gets all, Broker gets assigned only)
+ * - PATCH /api/leads: Update Lead (Protected, Brokers restricted from changing assignments)
  */
 
 const readJsonBody = (req) => {
@@ -25,6 +25,44 @@ const getFetch = async () => {
   return undici.fetch;
 };
 
+// ==================== USER ACCOUNTS CONFIG ====================
+const ACCOUNTS = {
+  admin: { password: process.env.ADMIN_PASS || "admin24k", role: "admin", name: "Admin Manager" },
+  manish: { password: process.env.MANISH_PASS || "manish24k", role: "broker", name: "Manish" },
+  amit: { password: process.env.AMIT_PASS || "amit24k", role: "broker", name: "Amit" },
+  priya: { password: process.env.PRIYA_PASS || "priya24k", role: "broker", name: "Priya" }
+};
+
+/**
+ * Extract user session context from token
+ */
+function getUserContext(req) {
+  const authHeader = req.headers['authorization'] || '';
+  let token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  // Query parameter token fallback
+  if (!token) {
+    try {
+      const parsedUrl = new URL(req.url || '', 'http://localhost');
+      token = parsedUrl.searchParams.get('token') || '';
+    } catch (e) {}
+  }
+
+  if (!token) return null;
+
+  try {
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    const user = JSON.parse(decoded);
+    
+    const account = ACCOUNTS[user.username];
+    if (account && account.role === user.role && account.name === user.name) {
+      return user;
+    }
+  } catch (e) {}
+  
+  return null;
+}
+
 module.exports = async (req, res) => {
   console.log('[leads-api] Method:', req.method);
 
@@ -41,7 +79,6 @@ module.exports = async (req, res) => {
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const ADMIN_PASS = process.env.ADMIN_PASS || 'admin24k';
 
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     res.statusCode = 500;
@@ -101,27 +138,15 @@ module.exports = async (req, res) => {
   }
 
   // Authentication check for GET/PATCH
-  const authHeader = req.headers['authorization'] || '';
-  let token = authHeader.replace(/^Bearer\s+/i, '').trim();
-
-  // Query parameter token fallback (e.g., for direct links or custom scripts)
-  if (!token) {
-    try {
-      const parsedUrl = new URL(req.url || '', 'http://localhost');
-      token = parsedUrl.searchParams.get('token') || '';
-    } catch (e) {
-      // Ignore URL parse error
-    }
-  }
-
-  if (token !== ADMIN_PASS) {
+  const user = getUserContext(req);
+  if (!user) {
     res.statusCode = 401;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: 'Unauthorized' }));
     return;
   }
 
-  // 2. GET -> Fetch Leads (Admin)
+  // 2. GET -> Fetch Leads List (Protected & Role Filtered)
   if (req.method === 'GET') {
     try {
       const response = await localFetch(`${SUPABASE_URL}/rest/v1/leads?order=created_at.desc`, {
@@ -132,10 +157,30 @@ module.exports = async (req, res) => {
         }
       });
 
-      const data = await response.json();
-      res.statusCode = response.status;
+      if (!response.ok) {
+        res.statusCode = response.status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(await response.text());
+        return;
+      }
+
+      const allLeads = await response.json();
+      
+      // Filter list based on role
+      let filteredLeads = [];
+      if (user.role === 'admin') {
+        filteredLeads = allLeads;
+      } else if (user.role === 'broker') {
+        // Brokers only see leads assigned to them (case-insensitive check)
+        filteredLeads = allLeads.filter(lead => {
+          const assigned = lead.metadata && lead.metadata.assigned_to;
+          return assigned && assigned.toLowerCase() === user.name.toLowerCase();
+        });
+      }
+
+      res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(data));
+      res.end(JSON.stringify(filteredLeads));
     } catch (err) {
       console.error('[leads-api] GET error:', err);
       res.statusCode = 500;
@@ -145,7 +190,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // 3. PATCH -> Update Lead Stage and Metadata (Admin)
+  // 3. PATCH -> Update Lead (Protected & Restricted)
   if (req.method === 'PATCH') {
     try {
       const body = req.body && Object.keys(req.body).length ? req.body : await readJsonBody(req);
@@ -158,7 +203,7 @@ module.exports = async (req, res) => {
         return;
       }
 
-      // Fetch current lead from Supabase to merge metadata
+      // Fetch current lead from Supabase to check role permission
       const fetchResponse = await localFetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
         method: 'GET',
         headers: {
@@ -170,7 +215,7 @@ module.exports = async (req, res) => {
       if (!fetchResponse.ok) {
         res.statusCode = fetchResponse.status;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: `Failed to fetch lead for merge: ${fetchResponse.status}` }));
+        res.end(JSON.stringify({ error: `Failed to fetch lead for authorization check` }));
         return;
       }
 
@@ -183,15 +228,37 @@ module.exports = async (req, res) => {
       }
 
       const current = currentLeads[0];
-
-      // Build updates object
       const patchBody = {};
-      if (stage !== undefined) patchBody.crm_stage = stage;
-      if (metadata !== undefined) {
-        patchBody.metadata = {
-          ...(current.metadata || {}),
-          ...metadata
-        };
+
+      if (user.role === 'admin') {
+        // Admin can update everything
+        if (stage !== undefined) patchBody.crm_stage = stage;
+        if (metadata !== undefined) {
+          patchBody.metadata = {
+            ...(current.metadata || {}),
+            ...metadata
+          };
+        }
+      } else if (user.role === 'broker') {
+        // Brokers can only modify leads assigned to them
+        const assignedTo = current.metadata && current.metadata.assigned_to;
+        if (!assignedTo || assignedTo.toLowerCase() !== user.name.toLowerCase()) {
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Forbidden: You do not own this lead.' }));
+          return;
+        }
+
+        // Brokers can update stage, notes, and tasks, but CANNOT change broker assignment
+        if (stage !== undefined) patchBody.crm_stage = stage;
+        if (metadata !== undefined) {
+          // Block broker assignment updates by stripping the property
+          const { assigned_to, ...allowedMetadata } = metadata;
+          patchBody.metadata = {
+            ...(current.metadata || {}),
+            ...allowedMetadata
+          };
+        }
       }
 
       const response = await localFetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {

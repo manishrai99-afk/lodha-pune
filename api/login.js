@@ -1,7 +1,7 @@
 /**
- * Vercel Serverless Function: POST /api/login
+ * Vercel Serverless Function: POST /api/login — Enterprise RBAC Edition
  * 
- * Verifies admin password and returns token.
+ * Verifies username and password and returns stateless base64 session token.
  */
 
 const readJsonBody = (req) => {
@@ -14,6 +14,14 @@ const readJsonBody = (req) => {
     });
     req.on('error', reject);
   });
+};
+
+// ==================== USER ACCOUNTS CONFIG ====================
+const ACCOUNTS = {
+  admin: { password: process.env.ADMIN_PASS || "admin24k", role: "admin", name: "Admin Manager" },
+  manish: { password: process.env.MANISH_PASS || "manish24k", role: "broker", name: "Manish" },
+  amit: { password: process.env.AMIT_PASS || "amit24k", role: "broker", name: "Amit" },
+  priya: { password: process.env.PRIYA_PASS || "priya24k", role: "broker", name: "Priya" }
 };
 
 module.exports = async (req, res) => {
@@ -37,16 +45,28 @@ module.exports = async (req, res) => {
 
   try {
     const body = req.body && Object.keys(req.body).length ? req.body : await readJsonBody(req);
-    const ADMIN_PASS = process.env.ADMIN_PASS || 'admin24k';
+    const username = (body.username || '').trim().toLowerCase();
+    const password = (body.password || '').trim();
 
-    if (body.password === ADMIN_PASS) {
+    const account = ACCOUNTS[username];
+
+    if (account && account.password === password) {
+      // Generate stateless base64 session token
+      const userPayload = { username, role: account.role, name: account.name };
+      const token = Buffer.from(JSON.stringify(userPayload)).toString('base64');
+
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ status: 'success', token: ADMIN_PASS }));
+      res.end(JSON.stringify({ 
+        status: 'success', 
+        token, 
+        role: account.role, 
+        name: account.name 
+      }));
     } else {
       res.statusCode = 401;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: 'Invalid password' }));
+      res.end(JSON.stringify({ error: 'Invalid username or password' }));
     }
   } catch (err) {
     res.statusCode = 500;

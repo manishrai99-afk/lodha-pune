@@ -190,7 +190,7 @@
         padding: 32px 24px;
         display: flex;
         flex-direction: column;
-        gap: 32px;
+        gap: 24px;
       }
 
       @media (max-width: 1024px) {
@@ -231,6 +231,41 @@
         font-size: 0.72rem;
         letter-spacing: 0.05em;
         text-transform: uppercase;
+      }
+
+      /* Profile Widget */
+      .profile-widget {
+        padding: 12px 16px;
+        background: var(--green-soft);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.88rem;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      @media (max-width: 1024px) {
+        .profile-widget { display: none; }
+      }
+
+      .profile-label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+      }
+
+      .profile-name {
+        font-weight: 700;
+        color: var(--gold);
+      }
+
+      .profile-role {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-style: italic;
       }
 
       .connection-status {
@@ -486,12 +521,6 @@
         gap: 6px;
       }
 
-      .bar-chart-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.8rem;
-      }
-
       .bar-chart-line {
         background: rgba(255,255,255,0.02);
         border: 1px solid var(--border);
@@ -505,6 +534,12 @@
         background: var(--gold);
         border-radius: 2px;
         transition: width 0.5s ease-out;
+      }
+
+      .bar-chart-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
       }
 
       /* ==================== FUNNEL METRICS CARDS ==================== */
@@ -633,7 +668,7 @@
         color: var(--gold);
       }
 
-      /* ==================== NEW MODULE: BULK OPERATIONS BAR ==================== */
+      /* ==================== BULK OPERATIONS BAR ==================== */
       .bulk-bar {
         position: fixed;
         bottom: 24px;
@@ -791,7 +826,7 @@
       .stage-closed { background: var(--green-soft); color: #2ecc71; border-color: rgba(46, 204, 113, 0.3); }
       .stage-lost { background: var(--red-soft); color: var(--red); border-color: rgba(196, 69, 54, 0.3); }
 
-      /* ==================== NEW MODULE: LEAD SCORE & ASSIGN AVATARS ==================== */
+      /* Scoring & Assign Avatars */
       .card-badges-row {
         display: flex;
         justify-content: space-between;
@@ -860,7 +895,6 @@
         font-weight: 600;
       }
 
-      /* Task checklist info */
       .card-tasks-info {
         font-size: 0.78rem;
         color: var(--text-muted);
@@ -925,7 +959,7 @@
         color: #2ecc71;
       }
 
-      /* ==================== NEW MODULE: WHATSAPP TEMPLATES MENU ==================== */
+      /* WhatsApp Templates Menu */
       .wa-dropdown {
         position: relative;
       }
@@ -1109,7 +1143,7 @@
         text-decoration: underline;
       }
 
-      /* ==================== NEW MODULES: TASKS & NOTES UIs ==================== */
+      /* Notes & Tasks lists */
       .notes-list {
         display: flex;
         flex-direction: column;
@@ -1255,12 +1289,13 @@
     <div id="loginOverlay" class="login-overlay">
       <div class="login-card">
         <span class="login-logo">24K</span>
-        <h2>Access Locked</h2>
-        <p>Enter your credentials to manage real-time enquiries.</p>
+        <h2>CRM Secure Access</h2>
+        <p>Log in with your credentials to manage lead properties.</p>
         <form id="loginForm" class="login-form" onsubmit="handleLogin(event)">
-          <input type="password" id="passwordInput" placeholder="Enter CRM Password" required>
-          <button type="submit">Authenticate</button>
-          <div id="loginError" class="login-error">Invalid password. Try again.</div>
+          <input type="text" id="usernameInput" placeholder="Username" required>
+          <input type="password" id="passwordInput" placeholder="Password" required>
+          <button type="submit">Unlock CRM</button>
+          <div id="loginError" class="login-error">Invalid username or password. Try again.</div>
         </form>
       </div>
     </div>
@@ -1274,6 +1309,13 @@
             <strong>24K Realtors</strong>
             <small>Live CRM Dashboard</small>
           </div>
+        </div>
+
+        <!-- Role Profile Widget -->
+        <div class="profile-widget" id="profileWidget">
+          <span class="profile-label">Authorized Account</span>
+          <span class="profile-name" id="profileName">Loading User...</span>
+          <span class="profile-role" id="profileRole">Loading Role...</span>
         </div>
 
         <div class="connection-status">
@@ -1307,16 +1349,16 @@
             <button class="btn-action" onclick="toggleAnalytics()" title="Toggle Visual Charts">
               📊 Analytics Charts
             </button>
-            <button class="btn-action" onclick="exportCSV()">
+            <button class="btn-action" onclick="exportCSV()" id="exportCSVBtn">
               📥 Export CSV
             </button>
           </div>
         </div>
 
-        <!-- NEW MODULE: Visual Analytics & SVG Funnel Chart -->
+        <!-- Visual Analytics Panel -->
         <div class="analytics-panel" id="analyticsPanel">
           <div class="analytics-header">
-            <h3>📊 Visual Lead Analytics</h3>
+            <h3 id="analyticsPanelTitle">📊 Visual Lead Analytics</h3>
             <button class="btn-view-details" style="color:var(--red)" onclick="toggleAnalytics()">Close Drawer</button>
           </div>
           <div class="analytics-grid">
@@ -1349,7 +1391,7 @@
         <!-- Funnel Metrics Cards -->
         <div class="metrics-grid">
           <div class="metric-card all">
-            <div class="metric-label">Total leads</div>
+            <div class="metric-label" id="metricLabelTotal">Total leads</div>
             <div class="metric-value" id="metricTotal">0</div>
             <div class="metric-subtext">All-time enquiries</div>
           </div>
@@ -1379,7 +1421,7 @@
         <div class="controls-bar">
           <div class="search-box">
             <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" id="searchInput" placeholder="Search by name, phone, UTM source, broker..." oninput="applyFilters()">
+            <input type="text" id="searchInput" placeholder="Search by name, phone, UTM source..." oninput="applyFilters()">
           </div>
 
           <div class="filter-tabs" id="filterTabs">
@@ -1399,7 +1441,7 @@
       </main>
     </div>
 
-    <!-- NEW MODULE: BULK OPERATIONS FLOATING PANEL -->
+    <!-- BULK OPERATIONS FLOATING PANEL -->
     <div id="bulkBar" class="bulk-bar">
       <span class="bulk-count" id="bulkCountText">0 leads selected</span>
       <select id="bulkStageSelect" class="bulk-select-action">
@@ -1421,7 +1463,7 @@
       <button class="btn-view-details" style="color:var(--text-muted)" onclick="clearBulkSelection()">Cancel</button>
     </div>
 
-    <!-- ==================== LEAD INSPECTOR RIGHT SIDEBAR ==================== -->
+    <!-- LEAD INSPECTOR RIGHT SIDEBAR -->
     <div id="inspectorOverlay" class="inspector-overlay" onclick="closeInspector()"></div>
     <div id="inspectorPanel" class="inspector-panel">
       <div class="inspector-header">
@@ -1457,7 +1499,6 @@
           initializeDashboard();
         }
         
-        // Hide dropdown template menus if clicked outside
         document.addEventListener('click', () => {
           document.querySelectorAll('.wa-menu').forEach(m => m.classList.remove('show'));
         });
@@ -1466,19 +1507,24 @@
       // Handle Authentication
       async function handleLogin(e) {
         e.preventDefault();
+        const username = document.getElementById('usernameInput').value.trim();
         const password = document.getElementById('passwordInput').value.trim();
         const loginError = document.getElementById('loginError');
 
         try {
-          const res = await fetch('/api/leads/login', {
+          const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password })
+            body: JSON.stringify({ username, password })
           });
 
           if (res.ok) {
             const data = await res.json();
             localStorage.setItem('crm_token', data.token);
+            localStorage.setItem('crm_user_role', data.role);
+            localStorage.setItem('crm_user_name', data.name);
+            localStorage.setItem('crm_username', username);
+
             document.getElementById('loginOverlay').classList.add('hidden');
             initializeDashboard();
           } else {
@@ -1493,18 +1539,40 @@
 
       function handleLogout() {
         localStorage.removeItem('crm_token');
+        localStorage.removeItem('crm_user_role');
+        localStorage.removeItem('crm_user_name');
+        localStorage.removeItem('crm_username');
         if (sseSource) sseSource.close();
         location.reload();
       }
 
       // Initialize Dashboard Data
       async function initializeDashboard() {
+        const role = localStorage.getItem('crm_user_role') || 'broker';
+        const name = localStorage.getItem('crm_user_name') || 'Broker';
+        
+        document.getElementById('profileName').textContent = name;
+        document.getElementById('profileRole').textContent = role === 'admin' ? 'Manager (Admin)' : 'Consultant (Broker)';
+        
+        // Scope labels for brokers
+        if (role === 'broker') {
+          document.getElementById('metricLabelTotal').textContent = 'My Leads';
+          document.getElementById('analyticsPanelTitle').textContent = '📊 My Performance Analytics';
+          document.getElementById('exportCSVBtn').innerHTML = '📥 Export My leads (CSV)';
+          document.getElementById('searchInput').placeholder = 'Search my leads by name, phone...';
+        } else {
+          document.getElementById('metricLabelTotal').textContent = 'Global leads';
+          document.getElementById('analyticsPanelTitle').textContent = '📊 Global Performance Analytics';
+          document.getElementById('exportCSVBtn').innerHTML = '📥 Export All leads (CSV)';
+          document.getElementById('searchInput').placeholder = 'Search all leads by name, phone, broker...';
+        }
+
         showStatus('loading', 'Loading data...');
         await loadLeads();
         setupRealtime();
       }
 
-      // Fetch all leads from API
+      // Fetch leads
       async function loadLeads() {
         const token = localStorage.getItem('crm_token');
         try {
@@ -1581,13 +1649,20 @@
               updateMetrics();
               renderCharts();
               
-              // If inspector is open for this lead, refresh inspector
               const inspectorPanel = document.getElementById('inspectorPanel');
               if (inspectorPanel.classList.contains('open')) {
                 const openId = inspectorPanel.dataset.leadId;
                 if (Number(openId) === updatedLead.id) {
                   openInspector(updatedLead.id, null, true);
                 }
+              }
+            } else {
+              // If broker connected, and lead was updated to be assigned to them, we fetch leads to capture it!
+              const broker = (updatedLead.metadata && updatedLead.metadata.assigned_to) || '';
+              const myName = localStorage.getItem('crm_user_name') || '';
+              if (broker.toLowerCase() === myName.toLowerCase()) {
+                loadLeads();
+                showToast(`New lead assigned to you: ${updatedLead.name}`);
               }
             }
           });
@@ -1611,12 +1686,12 @@
           const prevCount = leads.length;
           await loadLeads();
           if (leads.length > prevCount) {
-            showToast(`Received ${leads.length - prevCount} new leads!`);
+            showToast(`Received ${leads.length - prevCount} new updates!`);
           }
         }, 5000);
       }
 
-      // Update Top metric counters
+      // Update metrics
       function updateMetrics() {
         const total = leads.length;
         const newCount = leads.filter(l => l.crm_stage === 'new').length;
@@ -1634,21 +1709,17 @@
         document.getElementById('conversionRate').textContent = `Conversion Rate: ${rate}%`;
       }
 
-      // ==================== NEW MODULE: LEAD SCORE ENGINE ====================
+      // Scoring
       function calculateLeadScore(lead) {
         let score = 0;
-
-        // 1. Budget weight (up to 3 points)
         if (lead.budget === 'Above ₹2.5 Cr') score += 3;
         else if (lead.budget === '₹1.8 Cr - ₹2.5 Cr') score += 2;
         else if (lead.budget === '₹1.2 Cr - ₹1.8 Cr') score += 1;
 
-        // 2. Timeline weight (up to 3 points)
         if (lead.timeline === 'Within 1 month') score += 3;
         else if (lead.timeline === '1-3 months') score += 2;
         else if (lead.timeline === '3-6 months') score += 1;
 
-        // 3. Requirement weight (up to 2 points)
         if (lead.requirement && lead.requirement.includes('Site Visit')) score += 2;
         else if (lead.requirement && lead.requirement.includes('3 BHK')) score += 2;
         else if (lead.requirement && lead.requirement.includes('2 BHK')) score += 1;
@@ -1658,10 +1729,11 @@
         return { code: 'cold', label: '❄️ Cold', score };
       }
 
-      // Render lead list
+      // Render leads list
       function renderLeads(highlightId = null) {
         const leadsGrid = document.getElementById('leadsGrid');
         const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const role = localStorage.getItem('crm_user_role') || 'broker';
         
         let filtered = leads;
 
@@ -1698,30 +1770,29 @@
           const isPulse = lead.id === highlightId ? 'new-pulse' : '';
           const score = calculateLeadScore(lead);
           
-          // Tasks checklist info
           const tasks = (lead.metadata && lead.metadata.tasks) || [];
           const totalTasks = tasks.length;
           const completedTasks = tasks.filter(t => t.completed).length;
           const taskPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
           
-          // Assigned Broker Info
           const broker = (lead.metadata && lead.metadata.assigned_to) || 'Unassigned';
           const brokerInitial = broker === 'Unassigned' ? '?' : broker.charAt(0).toUpperCase();
 
-          // Checkbox status
           const isChecked = selectedLeadIds.includes(lead.id) ? 'checked' : '';
           
           return `
             <div class="lead-card ${isPulse}" onclick="openInspector(${lead.id}, event)">
               <div class="lead-card-header">
-                <div class="lead-checkbox-wrapper" onclick="event.stopPropagation()">
-                  <input 
-                    type="checkbox" 
-                    class="lead-checkbox" 
-                    ${isChecked}
-                    onchange="toggleLeadSelection(${lead.id}, this.checked)"
-                  >
-                </div>
+                ${role === 'admin' ? `
+                  <div class="lead-checkbox-wrapper" onclick="event.stopPropagation()">
+                    <input 
+                      type="checkbox" 
+                      class="lead-checkbox" 
+                      ${isChecked}
+                      onchange="toggleLeadSelection(${lead.id}, this.checked)"
+                    >
+                  </div>
+                ` : ''}
                 
                 <div class="lead-card-title">
                   <h3>${escapeHtml(lead.name || '—')}</h3>
@@ -1742,21 +1813,24 @@
                 </div>
               </div>
 
-              <!-- Scoring & Broker Row -->
+              <!-- Scoring & Broker Assignment UI depending on Role -->
               <div class="card-badges-row">
                 <span class="score-badge score-${score.code}">${score.label}</span>
                 
-                <!-- Broker Assignee Select -->
                 <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px">
-                  <select 
-                    style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;outline:none;cursor:pointer"
-                    onchange="assignBroker(${lead.id}, this.value)"
-                  >
-                    <option value="Unassigned" ${broker === 'Unassigned' ? 'selected' : ''}>-- Assign Broker --</option>
-                    <option value="Manish" ${broker === 'Manish' ? 'selected' : ''}>Manish</option>
-                    <option value="Amit" ${broker === 'Amit' ? 'selected' : ''}>Amit</option>
-                    <option value="Priya" ${broker === 'Priya' ? 'selected' : ''}>Priya</option>
-                  </select>
+                  ${role === 'admin' ? `
+                    <select 
+                      style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;outline:none;cursor:pointer"
+                      onchange="assignBroker(${lead.id}, this.value)"
+                    >
+                      <option value="Unassigned" ${broker === 'Unassigned' ? 'selected' : ''}>-- Assign Broker --</option>
+                      <option value="Manish" ${broker === 'Manish' ? 'selected' : ''}>Manish</option>
+                      <option value="Amit" ${broker === 'Amit' ? 'selected' : ''}>Amit</option>
+                      <option value="Priya" ${broker === 'Priya' ? 'selected' : ''}>Priya</option>
+                    </select>
+                  ` : `
+                    <span style="font-size:0.8rem;color:var(--text-muted)">Broker: <strong>${escapeHtml(broker)}</strong></span>
+                  `}
                   <div 
                     class="assigned-avatar ${broker === 'Unassigned' ? 'unassigned' : ''}" 
                     title="Assigned to: ${broker}"
@@ -1772,7 +1846,7 @@
                 <span class="chip">${escapeHtml(lead.timeline || 'No Timeline')}</span>
               </div>
 
-              <!-- Checklist Status -->
+              <!-- Reminders Progress Bar -->
               ${totalTasks > 0 ? `
                 <div class="card-tasks-info">
                   <div style="display:flex;justify-content:space-between">
@@ -1791,7 +1865,6 @@
                     📞
                   </a>
                   
-                  <!-- WhatsApp dropdown triggers templates menu -->
                   <div class="wa-dropdown">
                     <div 
                       class="contact-icon whatsapp" 
@@ -1817,41 +1890,7 @@
         }).join('');
       }
 
-      // Handle stage change patch request
-      async function changeStage(id, newStage) {
-        const token = localStorage.getItem('crm_token');
-        try {
-          const res = await fetch('/api/leads', {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ id, stage: newStage })
-          });
-
-          if (res.ok) {
-            const updated = await res.json();
-            const index = leads.findIndex(l => l.id === id);
-            if (index !== -1) {
-              leads[index] = updated;
-              renderLeads();
-              updateMetrics();
-              renderCharts();
-            }
-            showToast('Pipeline stage updated.');
-          } else {
-            alert('Failed to update stage. Please check connection.');
-            renderLeads();
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Network error. Stage update failed.');
-          renderLeads();
-        }
-      }
-
-      // ==================== NEW MODULE: ASSIGN TEAM BROKER ====================
+      // Broker Team assignment API patch
       async function assignBroker(id, brokerName) {
         const token = localStorage.getItem('crm_token');
         try {
@@ -1873,8 +1912,9 @@
             if (index !== -1) {
               leads[index] = updated;
               renderLeads();
+              renderCharts();
             }
-            showToast(`Broker assigned to: ${brokerName}`);
+            showToast(`Lead successfully assigned to: ${brokerName}`);
           }
         } catch (e) {
           console.error(e);
@@ -1882,10 +1922,9 @@
         }
       }
 
-      // ==================== NEW MODULE: WHATSAPP QUICK TEMPLATES ====================
+      // WhatsApp Quick templates
       function toggleWhatsAppMenu(id, e) {
         e.stopPropagation();
-        // Close other open menus
         document.querySelectorAll('.wa-menu').forEach(m => {
           if (m.id !== `waMenu-${id}`) m.classList.remove('show');
         });
@@ -1914,7 +1953,7 @@
         window.open(url, '_blank');
       }
 
-      // ==================== NEW MODULE: VISUAL SVG CHARTS ====================
+      // SVG/CSS Charts Drawer Renderer
       function toggleAnalytics() {
         document.getElementById('analyticsPanel').classList.toggle('open');
       }
@@ -1923,13 +1962,11 @@
         const total = leads.length;
         if (total === 0) return;
 
-        // 1. Funnel Chart Aggregation
         const newCount = leads.filter(l => l.crm_stage === 'new').length;
         const contactedCount = leads.filter(l => l.crm_stage === 'contacted').length;
         const visitCount = leads.filter(l => l.crm_stage === 'visit').length;
         const wonCount = leads.filter(l => l.crm_stage === 'closed').length;
 
-        // Percentages relative to total
         const newPercent = Math.round((newCount / total) * 100) || 0;
         const contactedPercent = Math.round((contactedCount / total) * 100) || 0;
         const visitPercent = Math.round((visitCount / total) * 100) || 0;
@@ -1954,7 +1991,6 @@
           </div>
         `;
 
-        // 2. Requirement distribution (Group by BHK)
         const bhk3 = leads.filter(l => l.requirement && l.requirement.includes('3 BHK')).length;
         const bhk2 = leads.filter(l => l.requirement && l.requirement.includes('2 BHK')).length;
         const visits = leads.filter(l => l.requirement && l.requirement.includes('Site Visit')).length;
@@ -1984,7 +2020,6 @@
           </div>
         `;
 
-        // 3. Lead Scores Breakdown
         let hot = 0, warm = 0, cold = 0;
         leads.forEach(l => {
           const sc = calculateLeadScore(l);
@@ -2013,7 +2048,7 @@
         `;
       }
 
-      // ==================== NEW MODULE: BULK SELECTION ====================
+      // Bulk actions
       function toggleLeadSelection(id, isChecked) {
         if (isChecked) {
           if (!selectedLeadIds.includes(id)) selectedLeadIds.push(id);
@@ -2054,7 +2089,6 @@
 
         showStatus('loading', 'Applying bulk updates...');
         
-        // Loop and execute updates in parallel
         const promises = selectedLeadIds.map(async (id) => {
           const body = { id };
           if (stage) body.stage = stage;
@@ -2083,7 +2117,7 @@
         }
       }
 
-      // Filtering operations
+      // Filters selector tabs
       function setFilter(filter, el) {
         currentFilter = filter;
         document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
@@ -2095,9 +2129,8 @@
         renderLeads();
       }
 
-      // Lead Details Inspector operations
+      // Details Inspector sidebar rendering
       function openInspector(id, e, keepOpen = false) {
-        // Prevent opening if clicking checkboxes, selects, or icons
         if (e && (e.target.className === 'lead-checkbox' || e.target.className.includes('contact-icon') || e.target.className.includes('stage-select') || e.target.tagName === 'SELECT')) {
           return;
         }
@@ -2111,9 +2144,7 @@
         const body = document.getElementById('inspectorBody');
         const formattedDate = lead.created_at || lead.inserted_at ? new Date(lead.created_at || lead.inserted_at).toLocaleString() : '—';
         
-        // Notes lists
         const notes = (lead.metadata && lead.metadata.notes) || [];
-        // Tasks list
         const tasks = (lead.metadata && lead.metadata.tasks) || [];
 
         body.innerHTML = `
@@ -2128,7 +2159,7 @@
             <div class="detail-row"><span class="detail-label">Assigned Broker</span><span class="detail-value">${escapeHtml(lead.metadata.assigned_to || 'Unassigned')}</span></div>
           </div>
 
-          <!-- NEW MODULE: TASK REMINDER LIST -->
+          <!-- Tasks & Reminders Module -->
           <div class="inspector-section">
             <h3>Reminders Checklist</h3>
             <div class="tasks-list">
@@ -2154,7 +2185,7 @@
             </div>
           </div>
 
-          <!-- NEW MODULE: TIMELINE NOTES -->
+          <!-- Interactive Notes timeline -->
           <div class="inspector-section">
             <h3>Internal Notes / Timeline</h3>
             <div class="notes-list">
@@ -2207,7 +2238,7 @@
         document.getElementById('inspectorPanel').classList.remove('open');
       }
 
-      // ==================== NEW MODULES: SAVE TASKS & SAVE NOTES ====================
+      // Save Notes & Tasks updates
       async function addNote(leadId) {
         const text = document.getElementById('newNoteText').value.trim();
         if (!text) return;
@@ -2295,7 +2326,6 @@
             if (index !== -1) {
               leads[index] = updated;
               renderLeads();
-              // Re-render open inspector
               openInspector(leadId, null, true);
             }
           }
@@ -2305,7 +2335,7 @@
         }
       }
 
-      // ==================== NEW MODULE: THEME TOGGLE ====================
+      // Theme toggle
       function toggleTheme() {
         const body = document.body;
         const toggleBtn = document.getElementById('themeToggle');
@@ -2331,7 +2361,7 @@
         text.textContent = msg;
       }
 
-      // Toast feedback popup
+      // Toast feedback
       function showToast(message) {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
@@ -2346,13 +2376,14 @@
         }, 4000);
       }
 
-      // CSV Exporter
+      // CSV Exporter (Dynamic scoping by role)
       function exportCSV() {
         if (leads.length === 0) {
           alert('No leads available to export.');
           return;
         }
 
+        const role = localStorage.getItem('crm_user_role') || 'broker';
         const headers = ["ID", "Created At", "Name", "Phone", "Requirement", "Budget", "Timeline", "CRM Stage", "Assigned Broker", "Lead Source", "Lead Series", "UTM Source", "UTM Medium", "UTM Campaign", "Landing Page", "Referrer"];
         
         const rows = leads.map(lead => [
@@ -2382,7 +2413,8 @@
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `crm-leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+        const fileName = role === 'admin' ? 'crm-global-leads-export' : 'crm-broker-leads-export';
+        link.download = `${fileName}-${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
       }
 
